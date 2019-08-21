@@ -7,6 +7,20 @@ var bodyParser = require("body-parser");
 var path = require('path');
 var multer = require('multer')
 var cors = require('cors');
+var https = require('https')
+
+
+const stringGen = (len) =>
+{
+    var text = " ";
+
+    var charset = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+    for( var i=0; i < len; i++ )
+        text += charset.charAt(Math.floor(Math.random() * charset.length));
+
+    return text;
+}
 
 MongoClient.connect("mongodb://localhost:27017",(err,client) =>{
     if(err) throw err
@@ -16,6 +30,15 @@ MongoClient.connect("mongodb://localhost:27017",(err,client) =>{
     app.listen(3001, function() {
     console.log('listening on 3001')
   })
+
+
+// https.createServer({
+//     key: fs.readFileSync('server.key'),
+//     cert: fs.readFileSync('server.cert')
+//   }, app)
+//   .listen(3001, function () {
+//     console.log('Example app listening on port 3001! Go to https://localhost:3001/')
+//   })
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
@@ -139,11 +162,16 @@ app.use(express.static(__dirname + '/public'));
     })
 
     app.post('/addTopic' , (req,res) => {
+        const temp_id = stringGen(16)
         db.collection("db_test").insertOne(
             {
+     
+                id:temp_id,
+                tag:req.body.tag,
+                filename:req.body.filename,
                 path:req.body.path,
-                id:req.body.id,
-                tag:req.body.tag
+                comment:req.body.comment,
+                replay: []
             },
             (err,result) => {
                 if(err) return res.status(500).send(err.toString())
@@ -151,6 +179,35 @@ app.use(express.static(__dirname + '/public'));
             }
         )
     })
+
+    app.post('/addComment',(req,res) =>   
+    {
+     const t = 
+            {
+                filename:req.body.filename,
+                path :req.body.path,
+                comment : req.body.comment
+            }
+        
+            db.collection("db_test").updateOne(
+                {
+                    id:req.body.id
+                },
+                {
+                    $push : 
+                    {
+                        replay : t
+                    }
+                }
+                ,
+            (err,result) => {
+                if(err) return res.status(500).send(err.toString())
+                res.sendStatus(200)
+            }
+            )
+
+        } 
+    )
 
     app.get('/topicList',(req,res) => 
     {
